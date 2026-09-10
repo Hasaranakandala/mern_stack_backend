@@ -17,11 +17,11 @@ export async function getProduct(req,res){
 
  try{
 if(isAdmin){
-   const product=await product.find();
+   const product=await Product.find();
  res.json(products);
 
 }else{
-   const product=await product.find({isAvailable:true});
+   const product=await Product.find({isAvailable:true});
  res.json(products);
 
 }
@@ -117,5 +117,87 @@ res.json({
 
 
 
+
+}
+
+export async function updateProduct(re,res){
+  if(!isAdmin(req)){
+    res.status(403).json({
+      message:"Youare not authorized to update product"
+    });
+    return ;
+
+  }
+  const productId=req.params.productId;
+  const updatingData=req.body;
+  try{
+await Product.updateOne({productId:productId}, updatingData);
+res.json({
+  message:"Product updated successfully"
+});
+
+
+
+
+  }catch(err){
+    res.stats(500).json({
+      message:"Internal server error",
+      error:err
+    })
+
+  }
+
+
+}
+
+
+export async function getProductById(req,res){
+  const productId=req.params.productId;
+ /* if(!isAdmin(req)){
+    res.status(403).json({
+      message:"You are not authorized to get product by id"
+    })
+
+  }
+    */
+    
+try{
+const product=await Product.findOne({productId:productId});
+if(product==null){
+  res.status(404).json({
+    message:"The product is not found"
+  })
+  return ;
+
+}
+if(product.isAvailable){
+  res.json(product);
+
+}
+else{
+  if(!isAdmin(req)){
+    res.status(404).json({
+    message:"The product is not found"
+  });
+  return ;
+
+
+  }else{
+    res.json(product);
+
+  }
+
+}
+
+
+}
+catch(err){
+  res.status(500).json({
+    message:"Internal server error",
+    error:err
+  })
+
+
+}
 
 }

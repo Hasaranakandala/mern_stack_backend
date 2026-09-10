@@ -11,14 +11,16 @@ const app = express();
 
 import dns from 'node:dns';
 
-import productRouter from "./routes/productRouter.js";
-import userRouter from "./routes/userRouter.js";
-
-
 dns.setServers([
   '8.8.8.8',
   '8.8.4.4'
 ]);
+
+
+import productRouter from "./routes/productRouter.js";
+import userRouter from "./routes/userRouter.js";
+import orderRouter from './routes/orderRouter.js';
+
 
 app.use(bodyParser.json());
 
@@ -64,6 +66,8 @@ mongoose.connect('mongodb+srv://admin:admin123@cluster0.21lpuuo.mongodb.net/User
 app.use('/product', productRouter);
 
 app.use("/user", userRouter);
+app.use("/order",orderRouter);
+
 
 
 
