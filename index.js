@@ -2,20 +2,22 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 import jwt from "jsonwebtoken";
- 
-
+import cors from 'cors'
 const app = express();
 
+import dotenv from "dotenv";
+
+dotenv.config();
 
 
 
 import dns from 'node:dns';
-
 dns.setServers([
   '8.8.8.8',
   '8.8.4.4'
 ]);
 
+app.use(cors())
 
 import productRouter from "./routes/productRouter.js";
 import userRouter from "./routes/userRouter.js";
@@ -23,6 +25,7 @@ import orderRouter from './routes/orderRouter.js';
 
 
 app.use(bodyParser.json());
+
 
 app.use((req,res,next)=>{
   const tokenString=req.header("Authorization");
@@ -53,9 +56,10 @@ app.use((req,res,next)=>{
 })
 
 
-mongoose.connect('mongodb+srv://admin:admin123@cluster0.21lpuuo.mongodb.net/User?appName=Cluster0').then(() => {
-  console.log("Database is connected successfully")
-}).catch((error) => {
+mongoose.connect(process.env.MONGODB_URL).then(()=>{
+  console.log("Database connection successfull")
+})
+ .catch((error) => {
   console.log("Database connection failed:", error);
 });
 
@@ -63,10 +67,10 @@ mongoose.connect('mongodb+srv://admin:admin123@cluster0.21lpuuo.mongodb.net/User
 
 
 
-app.use('/product', productRouter);
+app.use('/api/product', productRouter);
 
-app.use("/user", userRouter);
-app.use("/order",orderRouter);
+app.use("/api/user", userRouter);
+app.use("/api/order",orderRouter);
 
 
 

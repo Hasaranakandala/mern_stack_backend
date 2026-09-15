@@ -87,6 +87,7 @@ export function getUser(req,res){
 
 
 export function loginUser(req,res){
+ console.log("LOGIN FUNCTION CALLED");
 
   const email=req.body.email
   const password=req.body.password
