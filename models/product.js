@@ -2,17 +2,18 @@ import mongoose from  "mongoose";
 
 
 const productSchema=mongoose.Schema({
+
  productId:{
   type:String,
   required:true,
   unique:true
  },
+
+ 
  productName:{
   type:String,
   required:true,
   
-
-
  },
  alternativeName:[
   {type:String}
@@ -49,3 +50,11 @@ const productSchema=mongoose.Schema({
 const Product=mongoose.model.product || mongoose.model("product",productSchema);
 
 export default Product;
+//sune07P@123
+   
+
+
+
+
+
+

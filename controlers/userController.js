@@ -3,7 +3,9 @@ import bcrypt from "bcrypt";
 
 import jwt from "jsonwebtoken";
 
-   
+import dotenv from "dotenv";
+dotenv.config();
+
 
 export function createUser(req,res){
 
@@ -12,7 +14,7 @@ if(req.body.role=="admin"){
   
     if(req.user.role!="admin"){
       res.status(403).json({
-        message:"you are not authoriex to create an admin accounts"
+        message:"you are not authorieze  to create an admin accounts"
       })
       return ;
 
@@ -23,7 +25,7 @@ if(req.body.role=="admin"){
   
 
 
-  }
+  } 
   else{
     res.status(403).json({
       message:"You are not authorized to create an admin account .please login first"
@@ -87,7 +89,8 @@ export function getUser(req,res){
 
 
 export function loginUser(req,res){
- console.log("LOGIN FUNCTION CALLED");
+
+
 
   const email=req.body.email
   const password=req.body.password
@@ -111,13 +114,14 @@ if(isPasswordCorrect){
       role:user.role,
       img:user.img
 
-    }, "sune0P@123"
+    }, process.env.JWT_KEY
 
 
   )
   res.json({
     message:"Login successful ",
-    token:token
+    token:token,
+    role:user.role
   })
 }
 

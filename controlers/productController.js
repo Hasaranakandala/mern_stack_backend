@@ -18,11 +18,11 @@ export async function getProduct(req,res){
  try{
 if(isAdmin){
    const product=await Product.find();
- res.json(products);
+ res.json(product);
 
 }else{
    const product=await Product.find({isAvailable:true});
- res.json(products);
+ res.json(product);
 
 }
 

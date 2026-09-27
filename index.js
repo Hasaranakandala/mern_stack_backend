@@ -32,7 +32,7 @@ app.use((req,res,next)=>{
   if(tokenString!= null){
     const token=tokenString.replace("Bearer ","");
     console.log(token)
-    jwt.verify(token,"sune0P@123",(err,decoded)=>{
+    jwt.verify(token,process.env.JWT_KEY,(err,decoded)=>{
       if(decoded != null){
         console.log(decoded)
         req.user=decoded

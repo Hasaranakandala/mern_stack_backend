@@ -20,7 +20,7 @@ const orderSchema=mongoose.Schema({
     type:String,
     required:true
   },
-  addres:{
+  address:{
     type:String,
     required:true
   },
@@ -35,7 +35,7 @@ const orderSchema=mongoose.Schema({
 
   }, 
   total:{
-    type:String,
+    type:Number,
     required:true
   },
   products:[{
@@ -54,7 +54,7 @@ const orderSchema=mongoose.Schema({
     }],
     description:{
       type:String,
-      required:true
+      
 
     },
     images:[{
@@ -78,7 +78,7 @@ const orderSchema=mongoose.Schema({
   }],
   date:{
     type:Date,
-    defaul:Date.now
+    default:Date.now
   }
 
   
