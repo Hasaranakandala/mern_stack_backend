@@ -1,6 +1,8 @@
 import Order from "../models/order.js";
 import Product from "../models/product.js";
 
+
+import { isAdmin } from "./userController.js";
 export async function createOrder(req, res) {
   try {
     // Check whether user is logged in
@@ -143,7 +145,7 @@ export async function createOrder(req, res) {
   });
 }
 }
-
+/*
 export async function getOrder(){
 
 if(req.user==null){
@@ -176,10 +178,7 @@ date:-1
 });
 res.json(orders);
 
-
-
 }
-
 
 }catch (err){
 res.status(500).json({
@@ -191,4 +190,68 @@ error:err,
 
 }
 
+}
+
+*/
+export async function getOrder(req, res) {
+  try {
+    const orders = await Order.find();
+
+    return res.json(orders);
+
+  } catch (err) {
+    console.error("GET ORDERS ERROR:", err);
+
+    return res.status(500).json({
+      message: "Failed to fetch orders",
+      errorMessage: err.message
+    });
+  }
+}
+
+export async function updateOrderStatus(req, res) {
+
+  if (!isAdmin(req)) {
+    return res.status(403).json({
+      message: "You are not authorized to update order status!"
+    });
+  }
+
+  try {
+    const orderId = req.params.orderId;
+    const status = req.params.status;
+
+    console.log("ORDER ID:", orderId);
+    console.log("NEW STATUS:", status);
+
+    const result = await Order.updateOne(
+      {
+        orderId: orderId
+      },
+      {
+        status: status
+      }
+    );
+
+    console.log("UPDATE RESULT:", result);
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        message: "Order not found"
+      });
+    }
+
+    return res.json({
+      message: "Order status updated successfully!"
+    });
+
+  } catch (err) {
+    console.log("UPDATE ORDER ERROR:", err);
+    console.log("ERROR MESSAGE:", err.message);
+
+    return res.status(500).json({
+      message: "Failed to update order status",
+      errorMessage: err.message
+    });
+  }
 }
