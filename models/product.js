@@ -9,7 +9,7 @@ const productSchema=mongoose.Schema({
   unique:true
  },
 
- 
+
  productName:{
   type:String,
   required:true,

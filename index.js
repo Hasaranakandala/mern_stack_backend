@@ -22,6 +22,7 @@ app.use(cors())
 import productRouter from "./routes/productRouter.js";
 import userRouter from "./routes/userRouter.js";
 import orderRouter from './routes/orderRouter.js';
+import reviewRouter from './routes/reviewRouter.js';
 
 
 app.use(bodyParser.json());
@@ -71,6 +72,9 @@ app.use('/api/product', productRouter);
 
 app.use("/api/user", userRouter);
 app.use("/api/order",orderRouter);
+
+app.use("/api/review",reviewRouter);
+
 
 
 

@@ -9,6 +9,7 @@ dotenv.config();
 
 export function createUser(req,res){
 
+
 if(req.body.role=="admin"){
   if(req.user!= null){
   
@@ -55,7 +56,7 @@ if(req.body.role=="admin"){
 
   user.save().then(()=>{
     res.json({
-      message:"The user save and create successfullyy"
+      message:"The user save and create successfully"
     })
   }).catch(()=>{
     res.json({
@@ -106,6 +107,7 @@ export function loginUser(req,res){
 
       const isPasswordCorrect=bcrypt.compareSync(password,user.password);
 if(isPasswordCorrect){
+  
   const token =jwt.sign(
       
     {email:user.email,

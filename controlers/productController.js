@@ -16,7 +16,7 @@ export async function getProduct(req,res){
 
 
  try{
-if(isAdmin){
+if(isAdmin(req)){
    const product=await Product.find();
  res.json(product);
 
@@ -120,7 +120,7 @@ res.json({
 
 }
 
-export async function updateProduct(re,res){
+export async function updateProduct(req,res){
   if(!isAdmin(req)){
     res.status(403).json({
       message:"Youare not authorized to update product"

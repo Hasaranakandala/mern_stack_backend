@@ -7,9 +7,11 @@ export async function createOrder(req, res) {
   try {
     // Check whether user is logged in
     if (req.user == null) {
-      return res.status(403).json({
+     res.status(403).json({
         message: "Login and try again"
       });
+       return ;
+
     }
 
     const orderInfo = req.body;
@@ -90,8 +92,7 @@ export async function createOrder(req, res) {
         });
       }
 
-      console.log("FOUND PRODUCT:", item);
-      console.log("PRODUCT NAME:", item.name);
+
 
       products.push({
         productInfo: {
