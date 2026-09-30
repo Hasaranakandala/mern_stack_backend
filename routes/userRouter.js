@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser, getUser, loginUser } from "../controlers/userController.js";
+import { createUser, getUser, loginUser, loginWithGoogle } from "../controlers/userController.js";
 
 
 
@@ -12,6 +12,8 @@ userRouter.get("/", getUser);
 userRouter.post("/", createUser);
 
 userRouter.post("/login",loginUser);
+userRouter.post("/login/google",loginWithGoogle);
+
 
 
 

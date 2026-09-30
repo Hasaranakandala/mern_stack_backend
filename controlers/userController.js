@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 
 import dotenv from "dotenv";
 dotenv.config();
-
+import axios from "axios";
 
 export function createUser(req,res){
 
@@ -74,6 +74,91 @@ if(req.body.role=="admin"){
 
 }
 
+// adding google through login
+export async function loginWithGoogle(req, res) {
+  try {
+    const token = req.body.accessToken;
+
+    if (token == null) {
+      return res.status(400).json({
+        message: "Access Token is required"
+      });
+    }
+
+    const response = await axios.get(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: {
+          Authorization: "Bearer " + token
+        }
+      }
+    );
+
+    console.log(response.data);
+
+    const user= await User.findOne({email:response.data.email});
+
+    if(user==null){
+
+      const newUser=new User({
+        email:response.data.email,
+        firstName:response.data.given_name,
+        lastName:response.data.family_name,
+        password:"googleUser",
+        img:response.data.picture
+        
+      });
+      await newUser.save();
+      const token =jwt.sign({
+        email:newUser.email,
+        firstName:newUser.firstName,
+        lastName:newUser.lastName,
+        role:newUser.role,
+        img:newUser.img
+      },process.env.JWT_KEY);
+
+      res.json({
+        message:"Login successfull",
+        relo:newUser.role,
+        token:token
+      })
+  
+
+    }
+    else{   const token =jwt.sign({
+        email:user.email,
+        firstName:user.firstName,
+        lastName:user.lastName,
+        role:user.role,
+        img:user.img
+      },process.env.JWT_KEY);
+      
+      res.json({
+        message:"Login successfull",
+        relo:user.role,
+        token:token
+      })
+
+
+    }
+
+    return res.status(200).json({
+      message: "Google login successful",
+      user: response.data
+    });
+
+  } catch (error) {
+    console.log(
+      "Google login error:",
+      error.response?.data || error.message
+    );
+
+    return res.status(500).json({
+      message: "Google login failed",
+      error: error.response?.data || error.message
+    });
+  }
+}
 
 export function getUser(req,res){
 

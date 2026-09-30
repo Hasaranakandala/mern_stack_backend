@@ -3,23 +3,14 @@ import express from "express";
 import {
   createReview,
   getProductReviews,
+  getAllReviews,
   updateReview,
-  deleteReview,
-  getAllReviews
-} from "../controllers/reviewController.js";
-
-import { authenticateUser } from "../middleware/authentication.js";
-
+  deleteReview
+} from "../controlers/reviewController.js";
 
 const reviewRouter = express.Router();
 
-
-
-reviewRouter.post(
-  "/",
-  authenticateUser,
-  createReview
-);
+reviewRouter.post("/", createReview);
 
 reviewRouter.get(
   "/product/:productId",
@@ -33,14 +24,11 @@ reviewRouter.get(
 
 reviewRouter.put(
   "/:reviewId",
-  authenticateUser,
   updateReview
 );
 
-
 reviewRouter.delete(
   "/:reviewId",
-  authenticateUser,
   deleteReview
 );
 

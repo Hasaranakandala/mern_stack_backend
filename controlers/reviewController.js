@@ -1,4 +1,8 @@
-async function createReview(req, res) {
+ 
+ import Review from "../models/reviews.js";
+ import Order from "../models/order.js";
+
+ export async function createReview(req, res) {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -6,7 +10,7 @@ async function createReview(req, res) {
       });
     }
 
-    const { productId, rating, comment } = req.body;
+     const { productId, rating, comment } = req.body;
 
     if (!productId || !rating || !comment) {
       return res.status(400).json({
@@ -86,7 +90,7 @@ async function createReview(req, res) {
   }
 }
 
-async function getProductReviews(req, res) {
+  export async function getProductReviews(req, res) {
   try {
     const productId = req.params.productId;
 
@@ -111,7 +115,7 @@ async function getProductReviews(req, res) {
   }
 }
 
-async function getAllReviews(req, res) {
+  export async function getAllReviews(req, res) {
   try {
     const reviews = await Review.find()
       .sort({
@@ -133,7 +137,7 @@ async function getAllReviews(req, res) {
   }
 }
 
-async function updateReview(req, res) {
+  export async function updateReview(req, res) {
   try {
     if (!req.user) {
       return res.status(401).json({
@@ -208,7 +212,7 @@ async function updateReview(req, res) {
   }
 }
 
-async function deleteReview(req, res) {
+export async function deleteReview(req, res) {
   try {
     if (!req.user) {
       return res.status(401).json({
