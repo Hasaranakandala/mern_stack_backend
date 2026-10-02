@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser, getUser, loginUser, loginWithGoogle, resetPassword, sendOtp } from "../controlers/userController.js";
+import { createUser, getUser, loginUser,getUsers, loginWithGoogle, resetPassword, sendOtp } from "../controlers/userController.js";
 
 
 
@@ -16,7 +16,8 @@ userRouter.post("/login/google",loginWithGoogle);
 
 userRouter.post("/send-otp",sendOtp);
 
-userRouter.post("/rests-password",resetPassword);
+userRouter.post("/reset-password",resetPassword);
+userRouter.get("/",getUsers)
  
 
 

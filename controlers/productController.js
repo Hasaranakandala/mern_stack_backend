@@ -201,3 +201,33 @@ catch(err){
 }
 
 }
+
+export async function getSearchProduct(req,res){
+
+  const searchQuery=req.params.query;
+  try{
+
+    const products=await Product.find({
+      $or:[
+        {productName:{$regex:searchQuery,$options:"i"}},
+        {alternativeName:
+          {$eleMatch:
+          {$regex:searchQuery,$options:"i"}}
+        }
+      ],
+      isAvailable:true
+    });
+
+    res.json(products);
+
+
+  }catch(err){
+    res.status(500).jdon({
+      message:"Internel server error",
+      error:err
+    })
+
+
+  }
+
+}

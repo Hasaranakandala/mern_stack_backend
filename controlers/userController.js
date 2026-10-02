@@ -250,6 +250,19 @@ return true;
 
 }
 
+export function getUsers(req,res){
+  if(req.user==null){
+    res.status(401).json({
+      message:"You are not authorized to access this resouece"
+
+    })
+  }else{
+    res.json({
+      ...req.user,
+    })
+  }
+}
+
 /*
 const transport =nodemailer.createTransport({
   service:"gmail",
@@ -307,45 +320,34 @@ transport.sendMail(message,(error,infor)=>{
 }
 */
 
-export async function resetPassword(req,res){
+export async function resetPassword(req, res) {
+  try {
+    console.log("RESET PASSWORD BODY:", req.body);
 
-  const otp=req.body.otp;
-  const email=req.body.email;
+    const { email, otp, newPassword } = req.body;
 
-  const newPassword=req.body.newPassword;
-const response=OTP.findOne({email:email});
-if(response==null){
-  res.status(500).json({
-    message:"No OTP request found please try again"
-  })
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        message: "Email, OTP and new password are required"
+      });
+    }
+
+    console.log("Email:", email);
+    console.log("OTP:", otp);
+    console.log("New password received:", !!newPassword);
+
+    // your current reset password logic here
+
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:");
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
 }
-if(otp==response.otp){
-  await OTP.deeleteMany({
-    email:email
-  })
-
-
-  const hashPassword=bcrypt.hashSync(newPassword,10);
-
-const response2= await User.updateOne({
-  email:email
-},{
-  password:hashPassword
-});
-req.json({
-  message: "password has been reset successfully !"
-})
- 
-} 
-else{
-  res.status(403).json({
-    message:"OTP are not matching "
-  })
-}
-
-
-}
-
 
 
 const transport = nodemailer.createTransport({
