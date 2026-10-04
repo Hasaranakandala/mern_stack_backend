@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser, getUser, loginUser,getUsers, loginWithGoogle, resetPassword, sendOtp } from "../controlers/userController.js";
+import { createUser, getUser, loginUser,getUsers, loginWithGoogle, resetPassword, sendOtp,sendContactMessage } from "../controlers/userController.js";
 
 
 
@@ -19,6 +19,8 @@ userRouter.post("/send-otp",sendOtp);
 userRouter.post("/reset-password",resetPassword);
 userRouter.get("/",getUsers)
  
+userRouter.post("/contacts", sendContactMessage)
+
 
 
  

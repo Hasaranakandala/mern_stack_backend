@@ -1,11 +1,16 @@
+
+
 import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
 import jwt from "jsonwebtoken";
 import cors from 'cors'
+
 const app = express();
 
+
 import dotenv from "dotenv";
+
 
 dotenv.config();
 
@@ -25,7 +30,10 @@ import orderRouter from './routes/orderRouter.js';
 import reviewRouter from './routes/reviewRouter.js';
 
 
+
 app.use(bodyParser.json());
+
+
 
 
 app.use((req,res,next)=>{
@@ -55,6 +63,8 @@ app.use((req,res,next)=>{
 
 
 })
+
+
 
 
 mongoose.connect(process.env.MONGODB_URL).then(()=>{

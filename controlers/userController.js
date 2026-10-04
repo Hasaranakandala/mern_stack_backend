@@ -25,13 +25,13 @@ if(req.body.role=="admin"){
 
     }
   
-
-
   } 
   else{
     res.status(403).json({
       message:"You are not authorized to create an admin account .please login first"
     });
+
+
     return;
 
 
@@ -44,14 +44,12 @@ if(req.body.role=="admin"){
 
   const user=new User({
 
+
   firstName:req.body.firstName,
   lastName:req.body.lastName,
   email:req.body.email,
   password:hashedPassword,
   role:req.body.role,
-
-
-
 
   });
 
@@ -326,21 +324,69 @@ export async function resetPassword(req, res) {
 
     const { email, otp, newPassword } = req.body;
 
+   
     if (!email || !otp || !newPassword) {
       return res.status(400).json({
         message: "Email, OTP and new password are required"
       });
     }
 
-    console.log("Email:", email);
-    console.log("OTP:", otp);
-    console.log("New password received:", !!newPassword);
+   
+    const user = await User.findOne({
+      email: email
+    });
 
-    // your current reset password logic here
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    const otpData = await OTP.findOne({
+      email: email
+    });
+
+    if (!otpData) {
+      return res.status(400).json({
+        message: "OTP not found. Please request a new OTP."
+      });
+    }
+
+    console.log("Stored OTP:", otpData.otp);
+    console.log("Received OTP:", otp);
+
+   
+    if (Number(otpData.otp) !== Number(otp)) {
+      return res.status(400).json({
+        message: "Invalid OTP"
+      });
+    }
+
+    
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      10
+    );
+
+   
+    user.password = hashedPassword;
+
+    await user.save();
+
+    // 7. Delete OTP after successful password reset
+    await OTP.deleteMany({
+      email: email
+    });
+
+    console.log("Password reset successful for:", email);
+
+    
+    return res.status(200).json({
+      message: "Password reset successfully"
+    });
 
   } catch (error) {
-    console.error("RESET PASSWORD ERROR:");
-    console.error(error);
+    console.error("RESET PASSWORD ERROR:", error);
 
     return res.status(500).json({
       message: "Internal server error",
@@ -348,7 +394,6 @@ export async function resetPassword(req, res) {
     });
   }
 }
-
 
 const transport = nodemailer.createTransport({
   service: "gmail",
@@ -398,27 +443,314 @@ export async function sendOtp(req, res) {
       100000 + Math.random() * 900000
     );
 
-    const message = {
-      from: process.env.EMAIL,
-      to: email,
-      subject: "Reset Password - Crystal Beauty Clear",
-     text:`Hello,
+   const message = {
+  from: `"Crystal Beauty Clear" <${process.env.EMAIL}>`,
+  to: email,
+  subject: "Reset Your Password - Crystal Beauty Clear",
 
-We received a request to reset the password for your Crystal Beauty Clear account.
+  html: `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+      </head>
 
-Your One-Time Password (OTP) is:
+      <body
+        style="
+          margin: 0;
+          padding: 0;
+          background-color: #fff7f7;
+          font-family: Arial, Helvetica, sans-serif;
+          color: #1e293b;
+        "
+      >
 
-${randomOtp}
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          style="
+            background-color: #fff7f7;
+            padding: 40px 15px;
+          "
+        >
+          <tr>
+            <td align="center">
 
-Please use this code to verify your identity and continue resetting your password. This OTP will expire shortly for security reasons.
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                style="
+                  max-width: 600px;
+                  background-color: #ffffff;
+                  border-radius: 24px;
+                  overflow: hidden;
+                  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+                "
+              >
 
-For your protection, never share this code with anyone. Our team will never ask you for your OTP.
+                <!-- HEADER -->
+                <tr>
+                  <td
+                    style="
+                      background: linear-gradient(
+                        135deg,
+                        #ef4444,
+                        #fb7185
+                      );
+                      padding: 35px 30px;
+                      text-align: center;
+                    "
+                  >
 
-If you did not request a password reset, please ignore this email and your account will remain secure.
+                    <div
+                      style="
+                        width: 60px;
+                        height: 60px;
+                        line-height: 60px;
+                        margin: 0 auto 15px auto;
+                        background-color: rgba(255,255,255,0.18);
+                        border-radius: 18px;
+                        color: #ffffff;
+                        font-size: 28px;
+                        font-weight: bold;
+                      "
+                    >
+                      ✦
+                    </div>
 
-Best regards,  
-Crystal Beauty Clear Team` 
-    };
+                    <h1
+                      style="
+                        margin: 0;
+                        color: #ffffff;
+                        font-size: 26px;
+                        font-weight: 700;
+                      "
+                    >
+                      Password Reset
+                    </h1>
+
+                    <p
+                      style="
+                        margin: 10px 0 0 0;
+                        color: #ffe4e6;
+                        font-size: 14px;
+                      "
+                    >
+                      Crystal Beauty Clear
+                    </p>
+
+                  </td>
+                </tr>
+
+
+                <!-- BODY -->
+                <tr>
+                  <td
+                    style="
+                      padding: 35px 30px;
+                    "
+                  >
+
+                    <p
+                      style="
+                        margin: 0 0 15px 0;
+                        font-size: 16px;
+                        line-height: 1.7;
+                      "
+                    >
+                      Hello,
+                    </p>
+
+                    <p
+                      style="
+                        margin: 0 0 20px 0;
+                        color: #64748b;
+                        font-size: 15px;
+                        line-height: 1.7;
+                      "
+                    >
+                      We received a request to reset the password
+                      for your
+                      <strong style="color: #1e293b;">
+                        Crystal Beauty Clear
+                      </strong>
+                      account.
+                    </p>
+
+                    <p
+                      style="
+                        margin: 0 0 18px 0;
+                        color: #64748b;
+                        font-size: 15px;
+                        line-height: 1.7;
+                      "
+                    >
+                      Use the verification code below to continue
+                      resetting your password.
+                    </p>
+
+
+                    <!-- OTP BOX -->
+                    <table
+                      width="100%"
+                      cellpadding="0"
+                      cellspacing="0"
+                      style="
+                        margin: 25px 0;
+                      "
+                    >
+                      <tr>
+                        <td align="center">
+
+                          <div
+                            style="
+                              display: inline-block;
+                              background-color: #fff1f2;
+                              border: 1px solid #fecdd3;
+                              border-radius: 18px;
+                              padding: 22px 35px;
+                            "
+                          >
+
+                            <p
+                              style="
+                                margin: 0 0 8px 0;
+                                color: #e11d48;
+                                font-size: 12px;
+                                font-weight: 700;
+                                text-transform: uppercase;
+                                letter-spacing: 2px;
+                              "
+                            >
+                              Your OTP Code
+                            </p>
+
+                            <p
+                              style="
+                                margin: 0;
+                                color: #be123c;
+                                font-size: 38px;
+                                font-weight: 800;
+                                letter-spacing: 8px;
+                              "
+                            >
+                              ${randomOtp}
+                            </p>
+
+                          </div>
+
+                        </td>
+                      </tr>
+                    </table>
+
+
+                    <!-- INFO BOX -->
+                    <div
+                      style="
+                        background-color: #f8fafc;
+                        border-left: 4px solid #fb7185;
+                        border-radius: 12px;
+                        padding: 16px 18px;
+                        margin-top: 25px;
+                      "
+                    >
+
+                      <p
+                        style="
+                          margin: 0;
+                          color: #475569;
+                          font-size: 14px;
+                          line-height: 1.7;
+                        "
+                      >
+                        For your security, never share this code
+                        with anyone. Our team will never ask you
+                        to provide your OTP.
+                      </p>
+
+                    </div>
+
+
+                    <p
+                      style="
+                        margin: 25px 0 0 0;
+                        color: #64748b;
+                        font-size: 14px;
+                        line-height: 1.7;
+                      "
+                    >
+                      If you did not request a password reset,
+                      you can safely ignore this email. Your
+                      account will remain secure.
+                    </p>
+
+                    <p
+                      style="
+                        margin: 28px 0 0 0;
+                        color: #1e293b;
+                        font-size: 14px;
+                        line-height: 1.7;
+                      "
+                    >
+                      Best regards,<br />
+
+                      <strong>
+                        Crystal Beauty Clear Team
+                      </strong>
+                    </p>
+
+                  </td>
+                </tr>
+
+
+                <!-- FOOTER -->
+                <tr>
+                  <td
+                    style="
+                      background-color: #fff7f7;
+                      padding: 22px 30px;
+                      text-align: center;
+                      border-top: 1px solid #ffe4e6;
+                    "
+                  >
+
+                    <p
+                      style="
+                        margin: 0;
+                        color: #94a3b8;
+                        font-size: 12px;
+                        line-height: 1.6;
+                      "
+                    >
+                      This is an automated security email from
+                      Crystal Beauty Clear.
+                    </p>
+
+                    <p
+                      style="
+                        margin: 6px 0 0 0;
+                        color: #cbd5e1;
+                        font-size: 11px;
+                      "
+                    >
+                      Please do not share your OTP with anyone.
+                    </p>
+
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+        </table>
+
+      </body>
+    </html>
+  `,
+};
 
     const otp= new OTP({
       email:email,
@@ -443,6 +775,130 @@ Crystal Beauty Clear Team`
     return res.status(500).json({
       message: "Failed to send OTP",
       error: error.message
+    });
+  }
+}
+
+//contact message 
+
+
+export async function sendContactMessage(req, res) {
+  try {
+    const { name, email, subject, message } = req.body;
+
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+
+    await transporter.sendMail({
+      // YOUR PRODUCT SALES EMAIL
+      from: `"Beauty Store Website" <${process.env.EMAIL}>`,
+
+      // MAIL COMES TO SAME PRODUCT SALES EMAIL
+      to: process.env.EMAIL,
+
+      // WHEN YOU PRESS REPLY -> CUSTOMER EMAIL
+      replyTo: email,
+
+      subject: `New Contact Message - ${subject}`,
+
+      html: `
+        <div
+          style="
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+            background: #fffafa;
+            padding: 30px;
+            border-radius: 15px;
+          "
+        >
+
+          <h2 style="color: #ef4444;">
+            New Customer Message
+          </h2>
+
+          <p>
+            You received a new message from the Beauty Store website.
+          </p>
+
+          <hr
+            style="
+              border: none;
+              border-top: 1px solid #eeeeee;
+              margin: 20px 0;
+            "
+          />
+
+          <p>
+            <strong>Customer Name:</strong>
+            ${name}
+          </p>
+
+          <p>
+            <strong>Customer Email:</strong>
+            ${email}
+          </p>
+
+          <p>
+            <strong>Subject:</strong>
+            ${subject}
+          </p>
+
+          <p>
+            <strong>Message:</strong>
+          </p>
+
+          <div
+            style="
+              background: white;
+              padding: 15px;
+              border-radius: 10px;
+              margin-top: 10px;
+            "
+          >
+            ${message}
+          </div>
+
+          <p
+            style="
+              margin-top: 25px;
+              color: #64748b;
+              font-size: 13px;
+            "
+          >
+            Click Reply to respond directly to ${name}.
+          </p>
+
+        </div>
+      `,
+    });
+
+    return res.status(200).json({
+      message: "Message sent successfully",
+    });
+
+  } catch (error) {
+
+    console.error(
+      "CONTACT EMAIL ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message: "Failed to send message",
+      error: error.message,
     });
   }
 }

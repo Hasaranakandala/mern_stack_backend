@@ -6,13 +6,7 @@ import { isAdmin } from "./userController.js";
 
 export async function getProduct(req,res){
 
-  //Product.find().then((data)=>{
-    //res.status(200).json(data)
-  //}).catch(()=>{
-   // res.json({
-      //message:"The product is not //found in the database "
-   // })
- // });
+
 
 
  try{

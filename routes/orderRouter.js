@@ -5,11 +5,10 @@ import { createOrder, getOrder, updateOrderStatus } from "../controlers/orderCon
 
 
 orderRouter.post("/",createOrder);
+
 orderRouter.get("/",getOrder);
 
 orderRouter.put("/:orderId/:status",updateOrderStatus);
-
-
 
 
 export default orderRouter;
