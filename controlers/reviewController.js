@@ -214,17 +214,31 @@
 
 export async function deleteReview(req, res) {
   try {
+ 
+
     if (!req.user) {
       return res.status(401).json({
-        message: "Please login to delete review"
+        message: "Please login first"
       });
     }
 
     const reviewId = req.params.reviewId;
 
-    const review = await Review.findById(
-      reviewId
-    );
+
+    let review = await Review.findOne({
+      reviewId: reviewId
+    });
+
+    
+    if (!review) {
+      try {
+        review = await Review.findById(reviewId);
+      } catch (error) {
+       
+      }
+    }
+
+ 
 
     if (!review) {
       return res.status(404).json({
@@ -232,30 +246,43 @@ export async function deleteReview(req, res) {
       });
     }
 
-    // Only review owner can delete
-    if (review.email !== req.user.email) {
+  
+
+    const isAdmin =
+      req.user.role === "admin";
+
+    const isOwner =
+      review.email?.trim() ===
+      req.user.email?.trim();
+
+  
+    if (!isAdmin && !isOwner) {
       return res.status(403).json({
         message:
           "You are not allowed to delete this review"
       });
     }
 
+  
+
     await Review.findByIdAndDelete(
-      reviewId
+      review._id
     );
 
     return res.status(200).json({
       message:
         "Review deleted successfully"
     });
-
-  } catch (err) {
-    console.log("DELETE REVIEW ERROR:", err);
+  } catch (error) {
+    console.error(
+      "DELETE REVIEW ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      message: "Failed to delete review",
-      error: err.message
+      message:
+        "Failed to delete review",
+      error: error.message
     });
   }
 }
-

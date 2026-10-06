@@ -8,69 +8,170 @@ import dotenv from "dotenv";
 dotenv.config();
 import axios from "axios";
 
-export function createUser(req,res){
+export async function createUser(req, res) {
+  try {
 
 
-if(req.body.role=="admin"){
-  if(req.user!= null){
-  
-    if(req.user.role!="admin"){
-      res.status(403).json({
-        message:"you are not authorieze  to create an admin accounts"
-      })
-      return ;
+    if (req.body.role === "admin") {
+
+      if (req.user != null) {
+
+        if (req.user.role !== "admin") {
+
+          return res.status(403).json({
+            message:
+              "You are not authorized to create an admin account"
+          });
+
+        }
+
+      } else {
+
+        return res.status(403).json({
+          message:
+            "You are not authorized to create an admin account. Please login first"
+        });
+
+      }
+    }
 
 
 
+
+    const firstName =
+      req.body.firstName?.trim();
+
+    const lastName =
+      req.body.lastName?.trim();
+
+    // NO toLowerCase()
+    const email =
+      req.body.email?.trim();
+
+    const password =
+      req.body.password;
+
+    const role =
+      req.body.role || "customer";
+
+
+
+
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !password
+    ) {
+
+      return res.status(400).json({
+        message:
+          "First name, last name, email and password are required"
+      });
 
     }
+
+
+   
+
+
+
+    const existingUser =
+      await User.findOne({
+        email: email
+      });
+
+
   
-  } 
-  else{
-    res.status(403).json({
-      message:"You are not authorized to create an admin account .please login first"
+
+    console.log(
+      "REGISTER EXISTING USER:",
+      existingUser
+        ? existingUser.email
+        : "NO USER"
+    );
+
+
+
+
+    if (existingUser) {
+
+      return res.status(409).json({
+        message:
+          "An account with this email already exists"
+      });
+
+    }
+
+
+
+
+
+    const hashedPassword =
+      bcrypt.hashSync(
+        password,
+        10
+      );
+
+
+
+
+    const user = new User({
+
+      firstName:
+        firstName,
+
+      lastName:
+        lastName,
+
+      email:
+        email,
+
+      password:
+        hashedPassword,
+
+      role:
+        role
+
     });
 
 
-    return;
 
+    const savedUser =
+      await user.save();
+
+
+    console.log(
+      "USER CREATED SUCCESSFULLY:",
+      savedUser
+    );
+
+
+    return res.status(201).json({
+      message:
+        "User account created successfully"
+    });
+
+
+  } catch (error) {
+
+    console.error(
+      "CREATE USER ERROR:",
+      error
+    );
+
+
+    return res.status(500).json({
+
+      message:
+        "User account could not be created",
+
+      error:
+        error.message
+
+    });
 
   }
-}
-
-
-  const hashedPassword=bcrypt.hashSync(req.body.password,10);
-
-
-  const user=new User({
-
-
-  firstName:req.body.firstName,
-  lastName:req.body.lastName,
-  email:req.body.email,
-  password:hashedPassword,
-  role:req.body.role,
-
-  });
-
-  user.save().then(()=>{
-    res.json({
-      message:"The user save and create successfully"
-    })
-  }).catch(()=>{
-    res.json({
-      message:"The user account is not created !"
-    })
-  });
-
-
-
-
-
-
-
-
-
 }
 
 // adding google through login
@@ -180,12 +281,34 @@ export function loginUser(req,res){
   const email=req.body.email
   const password=req.body.password
 
+  console.log(
+      "LOGIN BODY:",
+      req.body
+    );
+
+    console.log(
+      "LOGIN EMAIL:",
+      JSON.stringify(req.body.email)
+    );
+
+
   User.findOne({email:email}).then(
   (user)=>{
     if(user==null){
     res.status(404).json({
       message:"The user not found"
     })
+
+
+   console.log(
+      "LOGIN FOUND USER:",
+      user
+        ? user.email
+        : "NO USER"
+    );
+
+
+
 
     }else{
 
