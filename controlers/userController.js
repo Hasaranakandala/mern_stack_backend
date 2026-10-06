@@ -530,9 +530,7 @@ const transport = nodemailer.createTransport({
 
 export async function sendOtp(req, res) {
   try {
-    // ==========================================
-    // GET EMAIL
-    // ==========================================
+
 
     const email = req.body.email?.trim();
 
@@ -544,9 +542,6 @@ export async function sendOtp(req, res) {
       });
     }
 
-    // ==========================================
-    // CHECK USER
-    // ==========================================
 
     const user = await User.findOne({
       email: email
@@ -563,9 +558,7 @@ export async function sendOtp(req, res) {
       user.email
     );
 
-    // ==========================================
-    // GENERATE OTP
-    // ==========================================
+
 
     const randomOtp =
       Math.floor(
@@ -573,9 +566,7 @@ export async function sendOtp(req, res) {
         Math.random() * 900000
       );
 
-    // ==========================================
-    // EMAIL
-    // ==========================================
+    
 
   const message = {
   from: `"Crystal Beauty Clear" <${process.env.EMAIL}>`,
@@ -662,18 +653,14 @@ Crystal Beauty Clear
   `
 };
 
-    // ==========================================
-    // SEND MAIL FIRST
-    // ==========================================
+   
 
     const info =
       await transport.sendMail(
         message
       );
 
-    // ==========================================
-    // IMPORTANT DEBUG INFORMATION
-    // ==========================================
+   
 
     console.log(
       "=============================="
