@@ -29,6 +29,7 @@ import userRouter from "./routes/userRouter.js";
 import orderRouter from './routes/orderRouter.js';
 import reviewRouter from './routes/reviewRouter.js';
 
+import paymentRouter from "./routes/paymentRouter.js";
 
 
 app.use(bodyParser.json());
@@ -76,6 +77,10 @@ mongoose.connect(process.env.MONGODB_URL).then(()=>{
 
 
 
+app.use(
+  "/api/payment",
+  paymentRouter
+);
 
 
 app.use('/api/product', productRouter);

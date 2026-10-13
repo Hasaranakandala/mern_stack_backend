@@ -1,17 +1,26 @@
 import Order from "../models/order.js";
 import Product from "../models/product.js";
 
+import Stripe from "stripe";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const stripe = new Stripe(
+  process.env.STRIPE_SECRET_KEY
+);
 
 import { isAdmin } from "./userController.js";
+
 export async function createOrder(req, res) {
   try {
     // Check whether user is logged in
     if (req.user == null) {
-     res.status(403).json({
+      res.status(403).json({
         message: "Login and try again"
       });
-       return ;
 
+      return;
     }
 
     const orderInfo = req.body;
@@ -54,10 +63,14 @@ export async function createOrder(req, res) {
       const newOrderNumberString =
         String(newOrderNumber).padStart(5, "0");
 
-      orderId = "CBC" + newOrderNumberString;
+      orderId =
+        "CBC" + newOrderNumberString;
     }
 
-    console.log("Generated Order ID:", orderId);
+    console.log(
+      "Generated Order ID:",
+      orderId
+    );
 
     let total = 0;
     let labelTotal = 0;
@@ -65,12 +78,19 @@ export async function createOrder(req, res) {
     const products = [];
 
     // Process products
-    for (let i = 0; i < orderInfo.products.length; i++) {
-      const requestedProduct = orderInfo.products[i];
+    for (
+      let i = 0;
+      i < orderInfo.products.length;
+      i++
+    ) {
+      const requestedProduct =
+        orderInfo.products[i];
 
-      const item = await Product.findOne({
-        productId: requestedProduct.productId
-      });
+      const item =
+        await Product.findOne({
+          productId:
+            requestedProduct.productId
+        });
 
       // Product not found
       if (item == null) {
@@ -83,7 +103,9 @@ export async function createOrder(req, res) {
       }
 
       // Product unavailable
-      if (item.isAvailble === false) {
+      if (
+        item.isAvailble === false
+      ) {
         return res.status(400).json({
           message:
             "Product with productId " +
@@ -92,60 +114,294 @@ export async function createOrder(req, res) {
         });
       }
 
-
-
       products.push({
         productInfo: {
-          productId: item.productId,
-          name: item.productName,
-          altNames: item.altNames,
-          description: item.description,
-          images: item.images,
-          labelPrice: item.labelPrice,
-          price: item.price
+          productId:
+            item.productId,
+
+          name:
+            item.productName,
+
+          altNames:
+            item.altNames,
+
+          description:
+            item.description,
+
+          images:
+            item.images,
+
+          labelPrice:
+            item.labelPrice,
+
+          price:
+            item.price
         },
 
-        quantity: requestedProduct.quantity
+        quantity:
+          requestedProduct.quantity
       });
 
-      total += item.price * requestedProduct.quantity;
+      total +=
+        item.price *
+        requestedProduct.quantity;
 
       labelTotal +=
-        item.labelPrice * requestedProduct.quantity;
+        item.labelPrice *
+        requestedProduct.quantity;
     }
 
-    console.log("Products:", products);
+    // =====================================================
+    // PAYMENT
+    // =====================================================
 
-    // Create order
-    const order = new Order({
-      orderId: orderId,
-      email: req.user.email,
-      name: orderInfo.name,
-      address: orderInfo.address,
-      phone: orderInfo.phone,
-      products: products,
-      labelTotal: labelTotal,
-      total: total
-    });
+    const paymentMethod =
+      orderInfo.paymentMethod ||
+      "cash_on_delivery";
 
-    const createdOrder = await order.save();
+    // Allow only supported payment methods
+    if (
+      ![
+        "cash_on_delivery",
+        "card"
+      ].includes(paymentMethod)
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid payment method"
+      });
+    }
+
+    // Default values for Cash on Delivery
+    let paymentStatus =
+      "pending";
+
+    let paymentReference =
+      "";
+
+    // =====================================================
+    // CARD PAYMENT
+    // =====================================================
+
+    if (
+      paymentMethod === "card"
+    ) {
+      // IMPORTANT:
+      // Get PaymentIntent ID sent from frontend
+      paymentReference =
+        orderInfo.paymentReference ||
+        "";
+
+      // Payment reference required for card
+      if (!paymentReference) {
+        return res.status(400).json({
+          message:
+            "Payment reference is required"
+        });
+      }
+
+      // Check whether same payment was already used
+      const existingPayment =
+        await Order.findOne({
+          paymentReference:
+            paymentReference
+        });
+
+      if (existingPayment) {
+        return res.status(409).json({
+          message:
+            "This payment has already been used"
+        });
+      }
+
+      // ===================================================
+      // GET PAYMENT FROM STRIPE
+      // ===================================================
+
+      let paymentIntent;
+
+      try {
+        paymentIntent =
+          await stripe.paymentIntents.retrieve(
+            paymentReference
+          );
+      } catch (stripeError) {
+        console.error(
+          "STRIPE PAYMENT ERROR:",
+          stripeError.message
+        );
+
+        return res.status(400).json({
+          message:
+            "Invalid payment reference"
+        });
+      }
+
+      // ===================================================
+      // PAYMENT MUST BE SUCCESSFUL
+      // ===================================================
+
+      if (
+        paymentIntent.status !==
+        "succeeded"
+      ) {
+        return res.status(400).json({
+          message:
+            "Card payment is not completed"
+        });
+      }
+
+      // ===================================================
+      // PAYMENT MUST BELONG TO LOGGED-IN USER
+      // ===================================================
+
+      if (
+        paymentIntent.metadata?.email !==
+        req.user.email
+      ) {
+        return res.status(403).json({
+          message:
+            "This payment does not belong to this user"
+        });
+      }
+
+      // ===================================================
+      // CHECK PAYMENT AMOUNT
+      // ===================================================
+
+      const expectedAmount =
+        Math.round(
+          total * 100
+        );
+
+      if (
+        paymentIntent.amount !==
+        expectedAmount
+      ) {
+        return res.status(400).json({
+          message:
+            "Payment amount does not match order total"
+        });
+      }
+
+      // ===================================================
+      // CHECK CURRENCY
+      // ===================================================
+
+      if (
+        paymentIntent.currency !==
+        "lkr"
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid payment currency"
+        });
+      }
+
+      // Card payment successfully verified
+      paymentStatus =
+        "paid";
+    }
+
+    // =====================================================
+    // CASH ON DELIVERY
+    // =====================================================
+
+    if (
+      paymentMethod ===
+      "cash_on_delivery"
+    ) {
+      paymentStatus =
+        "pending";
+
+      paymentReference =
+        "";
+    }
+
+    // =====================================================
+    // CREATE ORDER
+    // =====================================================
+
+    console.log(
+      "Products:",
+      products
+    );
+
+    const order =
+      new Order({
+        orderId:
+          orderId,
+
+        email:
+          req.user.email,
+
+        name:
+          orderInfo.name,
+
+        address:
+          orderInfo.address,
+
+        phone:
+          orderInfo.phone,
+
+        products:
+          products,
+
+        labelTotal:
+          labelTotal,
+
+        total:
+          total,
+
+        paymentMethod:
+          paymentMethod,
+
+        paymentStatus:
+          paymentStatus,
+
+        paymentReference:
+          paymentReference
+      });
+
+    const createdOrder =
+      await order.save();
 
     return res.status(201).json({
-      message: "Order created successfully!",
-      orderId: createdOrder.orderId
+      message:
+        "Order created successfully!",
+
+      orderId:
+        createdOrder.orderId,
+
+      paymentMethod:
+        createdOrder.paymentMethod,
+
+      paymentStatus:
+        createdOrder.paymentStatus
     });
 
   } catch (err) {
-  console.error("CREATE ORDER ERROR:");
-  console.error(err);
-  console.error("ERROR MESSAGE:", err.message);
+    console.error(
+      "CREATE ORDER ERROR:"
+    );
 
-  return res.status(500).json({
-    message: "Failed to create order",
-    errorMessage: err.message
-  });
+    console.error(err);
+
+    console.error(
+      "ERROR MESSAGE:",
+      err.message
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to create order",
+
+      errorMessage:
+        err.message
+    });
+  }
 }
-}
+
 /*
 export async function getOrder(){
 
@@ -194,18 +450,28 @@ error:err,
 }
 
 */
+
 export async function getOrder(req, res) {
   try {
-    const orders = await Order.find();
+    const orders =
+      await Order.find();
 
-    return res.json(orders);
+    return res.json(
+      orders
+    );
 
   } catch (err) {
-    console.error("GET ORDERS ERROR:", err);
+    console.error(
+      "GET ORDERS ERROR:",
+      err
+    );
 
     return res.status(500).json({
-      message: "Failed to fetch orders",
-      errorMessage: err.message
+      message:
+        "Failed to fetch orders",
+
+      errorMessage:
+        err.message
     });
   }
 }
@@ -214,45 +480,77 @@ export async function updateOrderStatus(req, res) {
 
   if (!isAdmin(req)) {
     return res.status(403).json({
-      message: "You are not authorized to update order status!"
+      message:
+        "You are not authorized to update order status!"
     });
   }
 
   try {
-    const orderId = req.params.orderId;
-    const status = req.params.status;
+    const orderId =
+      req.params.orderId;
 
-    console.log("ORDER ID:", orderId);
-    console.log("NEW STATUS:", status);
+    const status =
+      req.params.status;
 
-    const result = await Order.updateOne(
-      {
-        orderId: orderId
-      },
-      {
-        status: status
-      }
+    console.log(
+      "ORDER ID:",
+      orderId
     );
 
-    console.log("UPDATE RESULT:", result);
+    console.log(
+      "NEW STATUS:",
+      status
+    );
 
-    if (result.matchedCount === 0) {
+    const result =
+      await Order.updateOne(
+        {
+          orderId:
+            orderId
+        },
+        {
+          status:
+            status
+        }
+      );
+
+    console.log(
+      "UPDATE RESULT:",
+      result
+    );
+
+    if (
+      result.matchedCount ===
+      0
+    ) {
       return res.status(404).json({
-        message: "Order not found"
+        message:
+          "Order not found"
       });
     }
 
     return res.json({
-      message: "Order status updated successfully!"
+      message:
+        "Order status updated successfully!"
     });
 
   } catch (err) {
-    console.log("UPDATE ORDER ERROR:", err);
-    console.log("ERROR MESSAGE:", err.message);
+    console.log(
+      "UPDATE ORDER ERROR:",
+      err
+    );
+
+    console.log(
+      "ERROR MESSAGE:",
+      err.message
+    );
 
     return res.status(500).json({
-      message: "Failed to update order status",
-      errorMessage: err.message
+      message:
+        "Failed to update order status",
+
+      errorMessage:
+        err.message
     });
   }
 }

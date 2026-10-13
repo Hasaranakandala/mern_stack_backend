@@ -2,6 +2,32 @@ import mongoose from "mongoose";
 
 const orderSchema=mongoose.Schema({
 
+  paymentMethod: {
+  type: String,
+  enum: [
+    "cash_on_delivery",
+    "card",
+  ],
+  default:
+    "cash_on_delivery",
+},
+
+paymentStatus: {
+  type: String,
+  enum: [
+    "pending",
+    "paid",
+    "failed",
+    "refunded",
+  ],
+  default: "pending",
+},
+
+paymentReference: {
+  type: String,
+  default: "",
+},
+
   orderId:{
     type:String,
     required:true,
@@ -86,6 +112,6 @@ const orderSchema=mongoose.Schema({
 });
 
 
-const Order=mongoose.model.order || mongoose.model("order",orderSchema);
+const Order=mongoose.models.order || mongoose.model("order",orderSchema);
 
 export default Order;

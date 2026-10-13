@@ -175,90 +175,193 @@ export async function createUser(req, res) {
 }
 
 // adding google through login
-export async function loginWithGoogle(req, res) {
-  try {
-    const token = req.body.accessToken;
 
-    if (token == null) {
-      return res.status(400).json({
-        message: "Access Token is required"
-      });
+export async function loginWithGoogle(
+  req,
+  res
+) {
+  try {
+    const accessToken =
+      req.body.accessToken;
+
+    if (!accessToken) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Access Token is required",
+        });
     }
 
-    const response = await axios.get(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: "Bearer " + token
+    /*
+    ============================================
+    GET GOOGLE USER INFORMATION
+    ============================================
+    */
+
+    const response =
+      await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization:
+              "Bearer " +
+              accessToken,
+          },
         }
-      }
+      );
+
+    console.log(
+      "GOOGLE USER:",
+      response.data
     );
 
-    console.log(response.data);
+    const googleUser =
+      response.data;
 
-    const user= await User.findOne({email:response.data.email});
+    /*
+    ============================================
+    FIND EXISTING USER
+    ============================================
+    */
 
-    if(user==null){
-
-      const newUser=new User({
-        email:response.data.email,
-        firstName:response.data.given_name,
-        lastName:response.data.family_name,
-        password:"googleUser",
-        img:response.data.picture
-        
+    let user =
+      await User.findOne({
+        email:
+          googleUser.email,
       });
-      await newUser.save();
-      const token =jwt.sign({
-        email:newUser.email,
-        firstName:newUser.firstName,
-        lastName:newUser.lastName,
-        role:newUser.role,
-        img:newUser.img
-      },process.env.JWT_KEY);
 
-      res.json({
-        message:"Login successfull",
-        relo:newUser.role,
-        token:token
-      })
-  
+    /*
+    ============================================
+    CREATE USER IF NEW
+    ============================================
+    */
 
-    }
-    else{   const token =jwt.sign({
-        email:user.email,
-        firstName:user.firstName,
-        lastName:user.lastName,
-        role:user.role,
-        img:user.img
-      },process.env.JWT_KEY);
-      
-      res.json({
-        message:"Login successfull",
-        relo:user.role,
-        token:token
-      })
+    if (!user) {
+      const newUser =
+        new User({
+          email:
+            googleUser.email,
 
+          firstName:
+            googleUser.given_name,
 
+          lastName:
+            googleUser.family_name,
+
+          password:
+            "googleUser",
+
+          img:
+            googleUser.picture,
+        });
+
+      user =
+        await newUser.save();
     }
 
-    return res.status(200).json({
-      message: "Google login successful",
-      user: response.data
-    });
+    /*
+    ============================================
+    BLOCKED ACCOUNT CHECK
+    ============================================
+    */
+
+    if (
+      user.isBlock === true
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Your account has been blocked. Please contact Velmora support.",
+        });
+    }
+
+    /*
+    ============================================
+    CREATE JWT
+    ============================================
+    */
+
+    const token =
+      jwt.sign(
+        {
+          email:
+            user.email,
+
+          firstName:
+            user.firstName,
+
+          lastName:
+            user.lastName,
+
+          role:
+            user.role,
+
+          img:
+            user.img,
+        },
+
+        process.env.JWT_KEY
+      );
+
+    /*
+    ============================================
+    SUCCESS
+    ============================================
+    */
+
+    return res
+      .status(200)
+      .json({
+        message:
+          "Login successful",
+
+        role:
+          user.role,
+
+        token:
+          token,
+
+        user: {
+          email:
+            user.email,
+
+          firstName:
+            user.firstName,
+
+          lastName:
+            user.lastName,
+
+          role:
+            user.role,
+
+          img:
+            user.img,
+        },
+      });
 
   } catch (error) {
-    console.log(
-      "Google login error:",
-      error.response?.data || error.message
+    console.error(
+      "GOOGLE LOGIN ERROR:",
+      error.response?.data ||
+        error.message
     );
 
-    return res.status(500).json({
-      message: "Google login failed",
-      error: error.response?.data || error.message
-    });
+    return res
+      .status(500)
+      .json({
+        message:
+          "Google login failed",
+
+        error:
+          error.response?.data ||
+          error.message,
+      });
   }
 }
+
+
 
 export function getUser(req,res){
 
@@ -273,83 +376,164 @@ export function getUser(req,res){
 
 }
 
+export async function loginUser(req, res) {
+  try {
+    const email =
+      req.body.email;
 
-export function loginUser(req,res){
+    const password =
+      req.body.password;
 
-
-
-  const email=req.body.email
-  const password=req.body.password
-
-  console.log(
+    console.log(
       "LOGIN BODY:",
       req.body
     );
 
     console.log(
       "LOGIN EMAIL:",
-      JSON.stringify(req.body.email)
+      JSON.stringify(
+        req.body.email
+      )
     );
 
-
-  User.findOne({email:email}).then(
-  (user)=>{
-    if(user==null){
-    res.status(404).json({
-      message:"The user not found"
-    })
-
-
-   console.log(
-      "LOGIN FOUND USER:",
-      user
-        ? user.email
-        : "NO USER"
-    );
-
-
-
-
-    }else{
-
-      const isPasswordCorrect=bcrypt.compareSync(password,user.password);
-if(isPasswordCorrect){
-  
-  const token =jwt.sign(
-      
-    {email:user.email,
-      firstName:user.firstName,
-      lastName:user.lastName,
-      role:user.role,
-      img:user.img
-
-    }, process.env.JWT_KEY
-
-
-  )
-  res.json({
-    message:"Login successful ",
-    token:token,
-    role:user.role
-  })
-}
-
-else{
-  res.status(401).json({
-   message:"Invalid password"
-
-
-
-  })
-}
-
-
-
+    if (
+      !email ||
+      !password
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Email and password are required",
+        });
     }
-  }
 
-  )
+    /*
+    ============================================
+    FIND USER
+    ============================================
+    */
+
+    const user =
+      await User.findOne({
+        email: email,
+      });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "The user not found",
+        });
+    }
+
+    console.log(
+      "LOGIN FOUND USER:",
+      user.email
+    );
+
+    /*
+    ============================================
+    BLOCKED ACCOUNT CHECK
+    ============================================
+    */
+
+    if (
+      user.isBlock === true
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Your account has been blocked. Please contact Velmora support.",
+        });
+    }
+
+    /*
+    ============================================
+    PASSWORD CHECK
+    ============================================
+    */
+
+    const isPasswordCorrect =
+      bcrypt.compareSync(
+        password,
+        user.password
+      );
+
+    if (
+      !isPasswordCorrect
+    ) {
+      return res
+        .status(401)
+        .json({
+          message:
+            "Invalid password",
+        });
+    }
+
+    /*
+    ============================================
+    CREATE TOKEN
+    ============================================
+    */
+
+    const token =
+      jwt.sign(
+        {
+          email:
+            user.email,
+
+          firstName:
+            user.firstName,
+
+          lastName:
+            user.lastName,
+
+          role:
+            user.role,
+
+          img:
+            user.img,
+        },
+
+        process.env.JWT_KEY
+      );
+
+    return res
+      .status(200)
+      .json({
+        message:
+          "Login successful",
+
+        token:
+          token,
+
+        role:
+          user.role,
+      });
+
+  } catch (error) {
+    console.error(
+      "LOGIN ERROR:",
+      error
+    );
+
+    return res
+      .status(500)
+      .json({
+        message:
+          "Login failed",
+
+        error:
+          error.message,
+      });
+  }
 }
+
+
+
 
 
 export function isAdmin(req){
@@ -384,62 +568,7 @@ export function getUsers(req,res){
   }
 }
 
-/*
-const transport =nodemailer.createTransport({
-  service:"gmail",
-  host:"smtp.gmail.com",
-  port:587,
-  secure:false,
-  auth:{
-    user:process.env.EMAIL,
-    pass:process.env.EMAIL_PASSWORD
-  }
-})
 
-export async function sendOtp(){
-
-   
-  const randomOtp=Math.floor(100000+Math.random()*900000);
-
-const email=req.body.email;
- 
-if(email==null){
-  res.status(400).json({
-    message:"Email is required"
-    
-  });
-  return ;
-
-}
-const message={
-  from:process.env.EMAIL,
-  to: email,
-  subject: "reseting password for crystal beautt clear",
-  text:"this is your password reset OTP : "+randomOtp
-
-}
-
-transport.sendMail(message,(error,infor)=>{
-  if(error){
-    res.status(500).json({
-      message:"Failed send OTP",
-      error:error 
-        
-    })
-  }else{
-    res.json({
-      message:"OTP send successfully ",
-      otp:randomOtp
-    });
-     
-  }
-} )
-
-
-
-
-}
-*/
 
 export async function resetPassword(req, res) {
   try {
@@ -518,8 +647,10 @@ export async function resetPassword(req, res) {
   }
 }
 
+
 const transport = nodemailer.createTransport({
   service: "gmail",
+
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_PASSWORD
@@ -528,379 +659,222 @@ const transport = nodemailer.createTransport({
 
 export async function sendOtp(req, res) {
   try {
-    const email = req.body.email;
+
+
+    const email = req.body.email?.trim();
+
+    console.log("OTP REQUEST EMAIL:", email);
 
     if (!email) {
       return res.status(400).json({
         message: "Email is required"
       });
-      return;
-
     }
 
 
-
-
-    const user= await User.findOne({
-      email:email
+    const user = await User.findOne({
+      email: email
     });
 
-    if(user==null){
-      res.status(404).json({
-        message:"user not found !"
-      })
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found!"
+      });
     }
 
-    //delete all otp
-
-    await OTP.deleteMany({
-      email:email
-    })
-;
-
-
-
-
-    
-    const randomOtp = Math.floor(
-      100000 + Math.random() * 900000
+    console.log(
+      "USER FOUND:",
+      user.email
     );
 
-   const message = {
-  from: `"Crystal Beauty Clear" <${process.env.EMAIL}>`,
+
+
+    const randomOtp =
+      Math.floor(
+        100000 +
+        Math.random() * 900000
+      );
+
+    
+
+  const message = {
+  from: `"VELMORA" <${process.env.EMAIL}>`,
+
   to: email,
-  subject: "Reset Your Password - Crystal Beauty Clear",
+
+  subject: "Your VELMORA verification code",
+
+  text: `
+Hello ${user.firstName || "Customer"},
+
+Your password reset verification code is:
+
+${randomOtp}
+
+This code was requested for your VELMORA account.
+
+Do not share this code with anyone.
+
+If you did not request a password reset, you can safely ignore this email.
+
+VELMORA
+  `,
 
   html: `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-      </head>
+    <div style="
+      max-width: 520px;
+      margin: auto;
+      font-family: Arial, sans-serif;
+      color: #333333;
+    ">
 
-      <body
-        style="
-          margin: 0;
-          padding: 0;
-          background-color: #fff7f7;
-          font-family: Arial, Helvetica, sans-serif;
-          color: #1e293b;
-        "
-      >
+      <h2>
+        Password Reset
+      </h2>
 
-        <table
-          width="100%"
-          cellpadding="0"
-          cellspacing="0"
-          style="
-            background-color: #fff7f7;
-            padding: 40px 15px;
-          "
-        >
-          <tr>
-            <td align="center">
+      <p>
+        Hello ${user.firstName || "Customer"},
+      </p>
 
-              <table
-                width="100%"
-                cellpadding="0"
-                cellspacing="0"
-                style="
-                  max-width: 600px;
-                  background-color: #ffffff;
-                  border-radius: 24px;
-                  overflow: hidden;
-                  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-                "
-              >
+      <p>
+        Use the following verification code
+        to reset your VELMORA password.
+      </p>
 
-                <!-- HEADER -->
-                <tr>
-                  <td
-                    style="
-                      background: linear-gradient(
-                        135deg,
-                        #ef4444,
-                        #fb7185
-                      );
-                      padding: 35px 30px;
-                      text-align: center;
-                    "
-                  >
+      <div style="
+        margin: 30px 0;
+        padding: 20px;
+        background: #f7f7f7;
+        border-radius: 10px;
+        text-align: center;
+      ">
 
-                    <div
-                      style="
-                        width: 60px;
-                        height: 60px;
-                        line-height: 60px;
-                        margin: 0 auto 15px auto;
-                        background-color: rgba(255,255,255,0.18);
-                        border-radius: 18px;
-                        color: #ffffff;
-                        font-size: 28px;
-                        font-weight: bold;
-                      "
-                    >
-                      ✦
-                    </div>
+        <div style="
+          font-size: 12px;
+          margin-bottom: 8px;
+        ">
+          VERIFICATION CODE
+        </div>
 
-                    <h1
-                      style="
-                        margin: 0;
-                        color: #ffffff;
-                        font-size: 26px;
-                        font-weight: 700;
-                      "
-                    >
-                      Password Reset
-                    </h1>
+        <strong style="
+          font-size: 32px;
+          letter-spacing: 6px;
+        ">
+          ${randomOtp}
+        </strong>
 
-                    <p
-                      style="
-                        margin: 10px 0 0 0;
-                        color: #ffe4e6;
-                        font-size: 14px;
-                      "
-                    >
-                      Crystal Beauty Clear
-                    </p>
+      </div>
 
-                  </td>
-                </tr>
+      <p>
+        Do not share this code with anyone.
+      </p>
 
+      <p>
+        If you did not request a password reset,
+        you can safely ignore this email.
+      </p>
 
-                <!-- BODY -->
-                <tr>
-                  <td
-                    style="
-                      padding: 35px 30px;
-                    "
-                  >
+      <p>
+        
 
-                    <p
-                      style="
-                        margin: 0 0 15px 0;
-                        font-size: 16px;
-                        line-height: 1.7;
-                      "
-                    >
-                      Hello,
-                    </p>
+      velmora beauty products 
+      </p>
 
-                    <p
-                      style="
-                        margin: 0 0 20px 0;
-                        color: #64748b;
-                        font-size: 15px;
-                        line-height: 1.7;
-                      "
-                    >
-                      We received a request to reset the password
-                      for your
-                      <strong style="color: #1e293b;">
-                        Crystal Beauty Clear
-                      </strong>
-                      account.
-                    </p>
-
-                    <p
-                      style="
-                        margin: 0 0 18px 0;
-                        color: #64748b;
-                        font-size: 15px;
-                        line-height: 1.7;
-                      "
-                    >
-                      Use the verification code below to continue
-                      resetting your password.
-                    </p>
-
-
-                    <!-- OTP BOX -->
-                    <table
-                      width="100%"
-                      cellpadding="0"
-                      cellspacing="0"
-                      style="
-                        margin: 25px 0;
-                      "
-                    >
-                      <tr>
-                        <td align="center">
-
-                          <div
-                            style="
-                              display: inline-block;
-                              background-color: #fff1f2;
-                              border: 1px solid #fecdd3;
-                              border-radius: 18px;
-                              padding: 22px 35px;
-                            "
-                          >
-
-                            <p
-                              style="
-                                margin: 0 0 8px 0;
-                                color: #e11d48;
-                                font-size: 12px;
-                                font-weight: 700;
-                                text-transform: uppercase;
-                                letter-spacing: 2px;
-                              "
-                            >
-                              Your OTP Code
-                            </p>
-
-                            <p
-                              style="
-                                margin: 0;
-                                color: #be123c;
-                                font-size: 38px;
-                                font-weight: 800;
-                                letter-spacing: 8px;
-                              "
-                            >
-                              ${randomOtp}
-                            </p>
-
-                          </div>
-
-                        </td>
-                      </tr>
-                    </table>
-
-
-                    <!-- INFO BOX -->
-                    <div
-                      style="
-                        background-color: #f8fafc;
-                        border-left: 4px solid #fb7185;
-                        border-radius: 12px;
-                        padding: 16px 18px;
-                        margin-top: 25px;
-                      "
-                    >
-
-                      <p
-                        style="
-                          margin: 0;
-                          color: #475569;
-                          font-size: 14px;
-                          line-height: 1.7;
-                        "
-                      >
-                        For your security, never share this code
-                        with anyone. Our team will never ask you
-                        to provide your OTP.
-                      </p>
-
-                    </div>
-
-
-                    <p
-                      style="
-                        margin: 25px 0 0 0;
-                        color: #64748b;
-                        font-size: 14px;
-                        line-height: 1.7;
-                      "
-                    >
-                      If you did not request a password reset,
-                      you can safely ignore this email. Your
-                      account will remain secure.
-                    </p>
-
-                    <p
-                      style="
-                        margin: 28px 0 0 0;
-                        color: #1e293b;
-                        font-size: 14px;
-                        line-height: 1.7;
-                      "
-                    >
-                      Best regards,<br />
-
-                      <strong>
-                        Crystal Beauty Clear Team
-                      </strong>
-                    </p>
-
-                  </td>
-                </tr>
-
-
-                <!-- FOOTER -->
-                <tr>
-                  <td
-                    style="
-                      background-color: #fff7f7;
-                      padding: 22px 30px;
-                      text-align: center;
-                      border-top: 1px solid #ffe4e6;
-                    "
-                  >
-
-                    <p
-                      style="
-                        margin: 0;
-                        color: #94a3b8;
-                        font-size: 12px;
-                        line-height: 1.6;
-                      "
-                    >
-                      This is an automated security email from
-                      Crystal Beauty Clear.
-                    </p>
-
-                    <p
-                      style="
-                        margin: 6px 0 0 0;
-                        color: #cbd5e1;
-                        font-size: 11px;
-                      "
-                    >
-                      Please do not share your OTP with anyone.
-                    </p>
-
-                  </td>
-                </tr>
-
-              </table>
-
-            </td>
-          </tr>
-        </table>
-
-      </body>
-    </html>
-  `,
+    </div>
+  `
 };
 
-    const otp= new OTP({
-      email:email,
-      otp:randomOtp 
-    })
-    
-    await otp.save();
+   
+
+    const info =
+      await transport.sendMail(
+        message
+      );
+
+   
+
+    console.log(
+      "=============================="
+    );
+
+    console.log(
+      "OTP EMAIL RESULT"
+    );
+
+    console.log(
+      "TO:",
+      email
+    );
+
+    console.log(
+      "MESSAGE ID:",
+      info.messageId
+    );
+
+    console.log(
+      "ACCEPTED:",
+      info.accepted
+    );
+
+    console.log(
+      "REJECTED:",
+      info.rejected
+    );
+
+    console.log(
+      "PENDING:",
+      info.pending
+    );
+
+    console.log(
+      "RESPONSE:",
+      info.response
+    );
+
+    console.log(
+      "ENVELOPE:",
+      info.envelope
+    );
+
+    console.log(
+      "=============================="
+    );
 
 
-    const info = await transport.sendMail(message);
 
-    console.log("Email sent:", info.response);
-    console.log("Generated OTP:", randomOtp);
+    await OTP.deleteMany({
+      email: email
+    });
+
+    const otpData = new OTP({
+      email: email,
+      otp: randomOtp
+    });
+
+    await otpData.save();
 
     return res.status(200).json({
-      message: "OTP sent successfully"
+      message:
+        "OTP sent successfully"
     });
 
   } catch (error) {
-    console.error("OTP sending error:", error);
+    console.error(
+      "OTP SENDING ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      message: "Failed to send OTP",
-      error: error.message
+      message:
+        "Failed to send OTP",
+
+      error:
+        error.message
     });
   }
 }
+
+
 
 //contact message 
 
@@ -1022,6 +996,269 @@ export async function sendContactMessage(req, res) {
     return res.status(500).json({
       message: "Failed to send message",
       error: error.message,
+    });
+  }
+}
+
+export async function updateUserBlockStatus(req, res) {
+  try {
+   
+
+    const authorizationHeader =
+      req.headers.authorization;
+
+    if (!authorizationHeader) {
+      return res.status(401).json({
+        message:
+          "Authorization token is required",
+      });
+    }
+
+    if (
+      !authorizationHeader.startsWith(
+        "Bearer "
+      )
+    ) {
+      return res.status(401).json({
+        message:
+          "Invalid authorization format",
+      });
+    }
+
+    /*
+    ============================================
+    2. GET TOKEN
+    ============================================
+    */
+
+    const token =
+      authorizationHeader
+        .substring(7)
+        .trim();
+
+    if (!token) {
+      return res.status(401).json({
+        message:
+          "Authentication token is missing",
+      });
+    }
+
+    /*
+    ============================================
+    3. VERIFY TOKEN
+    ============================================
+    */
+
+    let decoded;
+
+    try {
+      decoded = jwt.verify(
+        token,
+        process.env.JWT_KEY
+      );
+    } catch (error) {
+      console.error(
+        "BLOCK USER TOKEN ERROR:",
+        error.message
+      );
+
+      if (
+        error.name ===
+        "TokenExpiredError"
+      ) {
+        return res.status(401).json({
+          message:
+            "Your login session has expired",
+        });
+      }
+
+      return res.status(401).json({
+        message:
+          "Invalid authentication token",
+      });
+    }
+
+    /*
+    ============================================
+    4. FIND LOGGED USER
+    ============================================
+    */
+
+    if (
+      !decoded ||
+      !decoded.email
+    ) {
+      return res.status(401).json({
+        message:
+          "Invalid authentication token",
+      });
+    }
+
+    const loggedUser =
+      await User.findOne({
+        email:
+          decoded.email,
+      });
+
+    if (!loggedUser) {
+      return res.status(404).json({
+        message:
+          "Logged user account not found",
+      });
+    }
+
+    /*
+    ============================================
+    5. CHECK LOGGED USER IS BLOCKED
+    ============================================
+    */
+
+    if (loggedUser.isBlock) {
+      return res.status(403).json({
+        message:
+          "Your account is currently blocked",
+      });
+    }
+
+    /*
+    ============================================
+    6. ADMIN CHECK
+    ============================================
+    */
+
+    if (
+      loggedUser.role !==
+      "admin"
+    ) {
+      return res.status(403).json({
+        message:
+          "Only administrators can manage account access",
+      });
+    }
+
+    /*
+    ============================================
+    7. GET TARGET USER
+    ============================================
+    */
+
+    const userId =
+      req.params.userId;
+
+    if (!userId) {
+      return res.status(400).json({
+        message:
+          "User ID is required",
+      });
+    }
+
+    const targetUser =
+      await User.findById(
+        userId
+      );
+
+    if (!targetUser) {
+      return res.status(404).json({
+        message:
+          "User account not found",
+      });
+    }
+
+    /*
+    ============================================
+    8. GET NEW BLOCK STATUS
+    ============================================
+    */
+
+    const {
+      isBlock,
+    } = req.body;
+
+    if (
+      typeof isBlock !==
+      "boolean"
+    ) {
+      return res.status(400).json({
+        message:
+          "isBlock must be true or false",
+      });
+    }
+
+    /*
+    ============================================
+    9. OPTIONAL SAFETY:
+       ADMIN CANNOT BLOCK HIMSELF
+    ============================================
+    */
+
+    if (
+      String(loggedUser._id) ===
+      String(targetUser._id)
+    ) {
+      return res.status(400).json({
+        message:
+          "You cannot block your own administrator account",
+      });
+    }
+
+    /*
+    ============================================
+    10. UPDATE USER
+    ============================================
+    */
+
+    targetUser.isBlock =
+      isBlock;
+
+    await targetUser.save();
+
+    /*
+    ============================================
+    11. SUCCESS RESPONSE
+    ============================================
+    */
+
+    return res.status(200).json({
+      message:
+        isBlock
+          ? "User blocked successfully"
+          : "User access restored successfully",
+
+      user: {
+        _id:
+          targetUser._id,
+
+        firstName:
+          targetUser.firstName,
+
+        lastName:
+          targetUser.lastName,
+
+        email:
+          targetUser.email,
+
+        role:
+          targetUser.role,
+
+        isBlock:
+          targetUser.isBlock,
+
+        img:
+          targetUser.img,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "UPDATE USER BLOCK STATUS ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to update account access",
+
+      error:
+        error.message,
     });
   }
 }

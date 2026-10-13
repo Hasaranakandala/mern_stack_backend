@@ -2,6 +2,9 @@ import express from "express";
 import { createUser, getUser, loginUser,getUsers, loginWithGoogle, resetPassword, sendOtp,sendContactMessage } from "../controlers/userController.js";
 
 
+import {
+  updateUserBlockStatus,
+} from "../controlers/userController.js";
 
 const userRouter = express.Router();
 
@@ -21,6 +24,10 @@ userRouter.get("/",getUsers)
  
 userRouter.post("/contacts", sendContactMessage)
 
+userRouter.put(
+  "/:userId/block",
+  updateUserBlockStatus
+);
 
 
  
